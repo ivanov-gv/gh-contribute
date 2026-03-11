@@ -2,6 +2,7 @@ package comment
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -17,23 +18,45 @@ var reactionEmoji = map[string]string{
 	"EYES":        "👀",
 }
 
+// timelineEntry is a union type for sorting issue comments and reviews together
+type timelineEntry struct {
+	createdAt    string
+	issueComment *IssueComment
+	review       *Review
+}
+
 // Format renders the full comments result as human-readable markdown
 func (r *CommentsResult) Format() string {
-	var b strings.Builder
-
-	// issue comments
-	for i, c := range r.IssueComments {
-		if i > 0 || len(r.Reviews) > 0 {
-			// separator between entries is implicit from the header
-		}
-		b.WriteString(formatIssueComment(&c, r.ViewerLogin))
-		b.WriteString("\n")
+	// merge issue comments and reviews into a single timeline
+	var entries []timelineEntry
+	for i := range r.IssueComments {
+		entries = append(entries, timelineEntry{
+			createdAt:    r.IssueComments[i].CreatedAt,
+			issueComment: &r.IssueComments[i],
+		})
+	}
+	for i := range r.Reviews {
+		entries = append(entries, timelineEntry{
+			createdAt: r.Reviews[i].CreatedAt,
+			review:    &r.Reviews[i],
+		})
 	}
 
-	// reviews
-	for _, rev := range r.Reviews {
-		b.WriteString(formatReview(&rev, r.ViewerLogin))
-		b.WriteString("\n")
+	// sort by date
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].createdAt < entries[j].createdAt
+	})
+
+	var b strings.Builder
+	for i, e := range entries {
+		if e.issueComment != nil {
+			b.WriteString(formatIssueComment(e.issueComment, r.ViewerLogin))
+		} else {
+			b.WriteString(formatReview(e.review, r.ViewerLogin))
+		}
+		if i < len(entries)-1 {
+			b.WriteString("\n---\n")
+		}
 	}
 
 	return strings.TrimRight(b.String(), "\n") + "\n"
@@ -49,11 +72,11 @@ func formatIssueComment(c *IssueComment, viewerLogin string) string {
 		if reason == "" {
 			reason = "hidden"
 		}
-		b.WriteString(fmt.Sprintf("# issue #%d by %s | hidden: %s\n", c.DatabaseID, authorDisplay, reason))
+		b.WriteString(fmt.Sprintf("issue #%d by %s | hidden: %s\n", c.DatabaseID, authorDisplay, reason))
 		return b.String()
 	}
 
-	b.WriteString(fmt.Sprintf("# issue #%d by %s\n", c.DatabaseID, authorDisplay))
+	b.WriteString(fmt.Sprintf("issue #%d by %s  \n", c.DatabaseID, authorDisplay))
 
 	// date
 	b.WriteString(fmt.Sprintf("_%s_\n", formatDate(c.CreatedAt)))
@@ -77,15 +100,15 @@ func formatReview(r *Review, viewerLogin string) string {
 
 	// hidden review: resolved or dismissed
 	if r.AllResolved {
-		b.WriteString(fmt.Sprintf("# review #%d by %s | hidden: Resolved\n", r.DatabaseID, authorDisplay))
+		b.WriteString(fmt.Sprintf("review #%d by %s | hidden: Resolved\n", r.DatabaseID, authorDisplay))
 		return b.String()
 	}
 	if r.State == "DISMISSED" {
-		b.WriteString(fmt.Sprintf("# review #%d by %s | hidden: Dismissed\n", r.DatabaseID, authorDisplay))
+		b.WriteString(fmt.Sprintf("review #%d by %s | hidden: Dismissed\n", r.DatabaseID, authorDisplay))
 		return b.String()
 	}
 
-	b.WriteString(fmt.Sprintf("# review #%d by %s\n", r.DatabaseID, authorDisplay))
+	b.WriteString(fmt.Sprintf("review #%d by %s  \n", r.DatabaseID, authorDisplay))
 
 	// date
 	b.WriteString(fmt.Sprintf("_%s_\n", formatDate(r.CreatedAt)))
@@ -99,7 +122,7 @@ func formatReview(r *Review, viewerLogin string) string {
 
 	// comment count
 	if r.CommentCount > 0 {
-		b.WriteString(fmt.Sprintf("comments: %d\n", r.CommentCount))
+		b.WriteString(fmt.Sprintf("comments: %d  \n", r.CommentCount))
 	}
 
 	// reactions
@@ -157,9 +180,9 @@ func formatReactions(reactions []Reaction, viewerLogin string) string {
 	for emoji, count := range counts {
 		parts = append(parts, fmt.Sprintf("%d %s", count, emoji))
 	}
-	b.WriteString(fmt.Sprintf("(%s)\n", strings.Join(parts, " ")))
+	b.WriteString(fmt.Sprintf("(%s)  \n", strings.Join(parts, " ")))
 
-	// by you line
+	// reactions by you line
 	if len(byViewer) > 0 {
 		var viewerCounts = make(map[string]int)
 		for _, e := range byViewer {
@@ -169,9 +192,9 @@ func formatReactions(reactions []Reaction, viewerLogin string) string {
 		for emoji, count := range viewerCounts {
 			viewerParts = append(viewerParts, fmt.Sprintf("%d %s", count, emoji))
 		}
-		b.WriteString(fmt.Sprintf("by you: (%s)\n", strings.Join(viewerParts, " ")))
+		b.WriteString(fmt.Sprintf("reactions by you: (%s)  \n", strings.Join(viewerParts, " ")))
 	} else {
-		b.WriteString("by you:\n")
+		b.WriteString("reactions by you:  \n")
 	}
 
 	return b.String()

@@ -252,6 +252,27 @@ func (s *Service) Post(prNumber int, body string) (*IssueComment, error) {
 	}, nil
 }
 
+// FilterByID returns a CommentsResult containing only the comment or review with the given database ID
+func (r *CommentsResult) FilterByID(id int64) *CommentsResult {
+	for _, c := range r.IssueComments {
+		if c.DatabaseID == id {
+			return &CommentsResult{
+				ViewerLogin:   r.ViewerLogin,
+				IssueComments: []IssueComment{c},
+			}
+		}
+	}
+	for _, rev := range r.Reviews {
+		if rev.DatabaseID == id {
+			return &CommentsResult{
+				ViewerLogin: r.ViewerLogin,
+				Reviews:     []Review{rev},
+			}
+		}
+	}
+	return nil
+}
+
 func mapReactions(nodes []reactionNode) []Reaction {
 	var reactions []Reaction
 	for _, n := range nodes {
