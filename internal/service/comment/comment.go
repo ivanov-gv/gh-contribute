@@ -40,14 +40,15 @@ type IssueComment struct {
 
 // Review holds a PR review summary
 type Review struct {
-	DatabaseID   int64
-	Author       string
-	Body         string
-	State        string // APPROVED, CHANGES_REQUESTED, COMMENTED, DISMISSED, PENDING
-	CreatedAt    string
-	CommentCount int
-	Reactions    []Reaction
-	AllResolved  bool // true if all review threads are resolved
+	DatabaseID      int64
+	Author          string
+	Body            string
+	State           string // APPROVED, CHANGES_REQUESTED, COMMENTED, DISMISSED, PENDING
+	CreatedAt       string
+	CommentCount    int
+	Reactions       []Reaction
+	IsMinimized     bool
+	MinimizedReason string
 }
 
 // CommentsResult holds all comments and reviews for a PR
@@ -70,9 +71,6 @@ type commentsQuery struct {
 			Reviews struct {
 				Nodes []reviewNode `json:"nodes"`
 			} `json:"reviews"`
-			ReviewThreads struct {
-				Nodes []reviewThreadNode `json:"nodes"`
-			} `json:"reviewThreads"`
 		} `json:"pullRequest"`
 	} `json:"repository"`
 }
@@ -90,32 +88,19 @@ type issueCommentNode struct {
 }
 
 type reviewNode struct {
-	DatabaseID int64  `json:"databaseId"`
-	Author     author `json:"author"`
-	Body       string `json:"body"`
-	State      string `json:"state"`
-	CreatedAt  string `json:"createdAt"`
-	Comments   struct {
+	DatabaseID      int64  `json:"databaseId"`
+	Author          author `json:"author"`
+	Body            string `json:"body"`
+	State           string `json:"state"`
+	CreatedAt       string `json:"createdAt"`
+	IsMinimized     bool   `json:"isMinimized"`
+	MinimizedReason string `json:"minimizedReason"`
+	Comments        struct {
 		TotalCount int `json:"totalCount"`
-		Nodes      []struct {
-			IsMinimized     bool   `json:"isMinimized"`
-			MinimizedReason string `json:"minimizedReason"`
-		} `json:"nodes"`
 	} `json:"comments"`
 	Reactions struct {
 		Nodes []reactionNode `json:"nodes"`
 	} `json:"reactions"`
-}
-
-type reviewThreadNode struct {
-	IsResolved bool `json:"isResolved"`
-	Comments   struct {
-		Nodes []struct {
-			PullRequestReview *struct {
-				DatabaseID int64 `json:"databaseId"`
-			} `json:"pullRequestReview"`
-		} `json:"nodes"`
-	} `json:"comments"`
 }
 
 type author struct {
@@ -148,22 +133,10 @@ query($owner: String!, $repo: String!, $number: Int!) {
           databaseId
           author { login }
           body state createdAt
-          comments(first: 100) {
-            totalCount
-            nodes { isMinimized minimizedReason }
-          }
+          isMinimized minimizedReason
+          comments { totalCount }
           reactions(first: 100) {
             nodes { content user { login } }
-          }
-        }
-      }
-      reviewThreads(first: 100) {
-        nodes {
-          isResolved
-          comments(first: 50) {
-            nodes {
-              pullRequestReview { databaseId }
-            }
           }
         }
       }
@@ -185,24 +158,6 @@ func (s *Service) List(prNumber int) (*CommentsResult, error) {
 
 	pr := result.Repository.PullRequest
 
-		// build map: reviewDatabaseId → list of thread isResolved values
-	// we check ALL comments in a thread (not just first) so replies from other reviews are also mapped
-	reviewThreadResolved := make(map[int64][]bool)
-	for _, thread := range pr.ReviewThreads.Nodes {
-		seen := make(map[int64]bool)
-		for _, c := range thread.Comments.Nodes {
-			if c.PullRequestReview == nil {
-				continue
-			}
-			reviewID := c.PullRequestReview.DatabaseID
-			if !seen[reviewID] {
-				seen[reviewID] = true
-				reviewThreadResolved[reviewID] = append(reviewThreadResolved[reviewID], thread.IsResolved)
-			}
-		}
-	}
-
-	// map issue comments
 	var issueComments []IssueComment
 	for _, n := range pr.Comments.Nodes {
 		issueComments = append(issueComments, IssueComment{
@@ -216,45 +171,18 @@ func (s *Service) List(prNumber int) (*CommentsResult, error) {
 		})
 	}
 
-	// map reviews
 	var reviews []Review
 	for _, n := range pr.Reviews.Nodes {
-		// a review is hidden if:
-		// 1. all its comments are minimized (GitHub "mark as resolved" on the review body), or
-		// 2. all linked review threads are resolved
-		allResolved := false
-		if len(n.Comments.Nodes) > 0 {
-			allCommentsMinimized := true
-			for _, c := range n.Comments.Nodes {
-				if !c.IsMinimized {
-					allCommentsMinimized = false
-					break
-				}
-			}
-			allResolved = allCommentsMinimized
-		}
-		if !allResolved {
-			if threads, ok := reviewThreadResolved[n.DatabaseID]; ok && len(threads) > 0 {
-				allThreadsResolved := true
-				for _, resolved := range threads {
-					if !resolved {
-						allThreadsResolved = false
-						break
-					}
-				}
-				allResolved = allThreadsResolved
-			}
-		}
-
 		reviews = append(reviews, Review{
-			DatabaseID:   n.DatabaseID,
-			Author:       n.Author.Login,
-			Body:         n.Body,
-			State:        n.State,
-			CreatedAt:    n.CreatedAt,
-			CommentCount: n.Comments.TotalCount,
-			Reactions:    mapReactions(n.Reactions.Nodes),
-			AllResolved:  allResolved,
+			DatabaseID:      n.DatabaseID,
+			Author:          n.Author.Login,
+			Body:            n.Body,
+			State:           n.State,
+			CreatedAt:       n.CreatedAt,
+			CommentCount:    n.Comments.TotalCount,
+			Reactions:       mapReactions(n.Reactions.Nodes),
+			IsMinimized:     n.IsMinimized,
+			MinimizedReason: n.MinimizedReason,
 		})
 	}
 

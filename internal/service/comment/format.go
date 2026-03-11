@@ -98,9 +98,13 @@ func formatReview(r *Review, viewerLogin string) string {
 	// header
 	authorDisplay := formatAuthor(r.Author, viewerLogin)
 
-	// hidden review: resolved or dismissed
-	if r.AllResolved {
-		b.WriteString(fmt.Sprintf("review #%d by %s | hidden: Resolved\n", r.DatabaseID, authorDisplay))
+	// hidden review
+	if r.IsMinimized {
+		reason := r.MinimizedReason
+		if reason == "" {
+			reason = "hidden"
+		}
+		b.WriteString(fmt.Sprintf("review #%d by %s | hidden: %s\n", r.DatabaseID, authorDisplay, reason))
 		return b.String()
 	}
 	if r.State == "DISMISSED" {
