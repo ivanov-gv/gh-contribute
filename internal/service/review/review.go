@@ -34,7 +34,6 @@ type ReviewComment struct {
 	Path            string
 	Line            int
 	StartLine       int
-	CommitID        string
 	DiffHunk        string
 	ReplyToID       int64 // 0 if top-level
 	IsMinimized     bool
@@ -96,9 +95,6 @@ type reviewCommentNode struct {
 	Path           string `json:"path"`
 	Line           *int   `json:"line"`
 	StartLine      *int   `json:"startLine"`
-	OriginalCommit *struct {
-		OID string `json:"oid"`
-	} `json:"originalCommit"`
 	DiffHunk string `json:"diffHunk"`
 	ReplyTo  *struct {
 		DatabaseID int64 `json:"databaseId"`
@@ -139,7 +135,6 @@ query($owner: String!, $repo: String!, $number: Int!) {
               databaseId
               author { login }
               body createdAt path line startLine diffHunk
-              originalCommit { oid }
               replyTo { databaseId }
               isMinimized minimizedReason outdated subjectType
               reactions(first: 20) {
@@ -205,9 +200,6 @@ func mapReviewDetail(n *reviewDetailNode, viewerLogin string) *ReviewDetail {
 		}
 		if c.StartLine != nil {
 			rc.StartLine = *c.StartLine
-		}
-		if c.OriginalCommit != nil {
-			rc.CommitID = c.OriginalCommit.OID
 		}
 		if c.ReplyTo != nil {
 			rc.ReplyToID = c.ReplyTo.DatabaseID

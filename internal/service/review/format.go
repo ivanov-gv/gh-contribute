@@ -162,11 +162,7 @@ func formatReviewComment(c *ReviewComment, viewerLogin string, isReply bool) str
 		if c.Outdated {
 			outdatedMark = " (outdated)"
 		}
-		commitRef := ""
-		if c.CommitID != "" {
-			commitRef = fmt.Sprintf(" `%.7s`", c.CommitID)
-		}
-		b.WriteString(fmt.Sprintf("%scomment #%d by %s %s%s%s  \n", prefix, c.DatabaseID, authorDisplay, location, commitRef, outdatedMark))
+		b.WriteString(fmt.Sprintf("%scomment #%d by %s %s%s  \n", prefix, c.DatabaseID, authorDisplay, location, outdatedMark))
 	} else {
 		b.WriteString(fmt.Sprintf("%scomment #%d by %s  \n", prefix, c.DatabaseID, authorDisplay))
 	}

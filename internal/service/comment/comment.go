@@ -70,6 +70,9 @@ type commentsQuery struct {
 			Reviews struct {
 				Nodes []reviewNode `json:"nodes"`
 			} `json:"reviews"`
+			ReviewThreads struct {
+				Nodes []reviewThreadNode `json:"nodes"`
+			} `json:"reviewThreads"`
 		} `json:"pullRequest"`
 	} `json:"repository"`
 }
@@ -102,6 +105,17 @@ type reviewNode struct {
 	Reactions struct {
 		Nodes []reactionNode `json:"nodes"`
 	} `json:"reactions"`
+}
+
+type reviewThreadNode struct {
+	IsResolved bool `json:"isResolved"`
+	Comments   struct {
+		Nodes []struct {
+			PullRequestReview *struct {
+				DatabaseID int64 `json:"databaseId"`
+			} `json:"pullRequestReview"`
+		} `json:"nodes"`
+	} `json:"comments"`
 }
 
 type author struct {
@@ -143,6 +157,16 @@ query($owner: String!, $repo: String!, $number: Int!) {
           }
         }
       }
+      reviewThreads(first: 100) {
+        nodes {
+          isResolved
+          comments(first: 50) {
+            nodes {
+              pullRequestReview { databaseId }
+            }
+          }
+        }
+      }
     }
   }
 }`
@@ -161,6 +185,23 @@ func (s *Service) List(prNumber int) (*CommentsResult, error) {
 
 	pr := result.Repository.PullRequest
 
+		// build map: reviewDatabaseId → list of thread isResolved values
+	// we check ALL comments in a thread (not just first) so replies from other reviews are also mapped
+	reviewThreadResolved := make(map[int64][]bool)
+	for _, thread := range pr.ReviewThreads.Nodes {
+		seen := make(map[int64]bool)
+		for _, c := range thread.Comments.Nodes {
+			if c.PullRequestReview == nil {
+				continue
+			}
+			reviewID := c.PullRequestReview.DatabaseID
+			if !seen[reviewID] {
+				seen[reviewID] = true
+				reviewThreadResolved[reviewID] = append(reviewThreadResolved[reviewID], thread.IsResolved)
+			}
+		}
+	}
+
 	// map issue comments
 	var issueComments []IssueComment
 	for _, n := range pr.Comments.Nodes {
@@ -178,15 +219,30 @@ func (s *Service) List(prNumber int) (*CommentsResult, error) {
 	// map reviews
 	var reviews []Review
 	for _, n := range pr.Reviews.Nodes {
-		// a review is "resolved" if all its comments are minimized
+		// a review is hidden if:
+		// 1. all its comments are minimized (GitHub "mark as resolved" on the review body), or
+		// 2. all linked review threads are resolved
 		allResolved := false
 		if len(n.Comments.Nodes) > 0 {
-			allResolved = true
+			allCommentsMinimized := true
 			for _, c := range n.Comments.Nodes {
 				if !c.IsMinimized {
-					allResolved = false
+					allCommentsMinimized = false
 					break
 				}
+			}
+			allResolved = allCommentsMinimized
+		}
+		if !allResolved {
+			if threads, ok := reviewThreadResolved[n.DatabaseID]; ok && len(threads) > 0 {
+				allThreadsResolved := true
+				for _, resolved := range threads {
+					if !resolved {
+						allThreadsResolved = false
+						break
+					}
+				}
+				allResolved = allThreadsResolved
 			}
 		}
 
