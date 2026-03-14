@@ -7,18 +7,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func (l *lazyApp) newReviewCmd() *cobra.Command {
+func (a *app) newReviewCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "review <review-id>",
 		Short: "Show review details with inline comments",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			a, err := l.get()
-			if err != nil {
-				handleErr(err)
-				return nil
-			}
-
 			reviewID, err := strconv.ParseInt(args[0], 10, 64)
 			if err != nil {
 				return fmt.Errorf("invalid review ID '%s': %w", args[0], err)
@@ -26,7 +20,7 @@ func (l *lazyApp) newReviewCmd() *cobra.Command {
 
 			// resolve PR number
 			prNumber, _ := cmd.Flags().GetInt("pr")
-			number, err := resolvePR(a, prNumber)
+			number, err := a.resolvePR(prNumber)
 			if err != nil {
 				return err
 			}

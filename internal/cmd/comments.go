@@ -7,21 +7,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func (l *lazyApp) newCommentsCmd() *cobra.Command {
+func (a *app) newCommentsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "comments [comment-id]",
 		Short: "List comments on a PR, or show a single comment by ID",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			a, err := l.get()
-			if err != nil {
-				handleErr(err)
-				return nil
-			}
-
 			// resolve PR number
 			prNumber, _ := cmd.Flags().GetInt("pr")
-			number, err := resolvePR(a, prNumber)
+			number, err := a.resolvePR(prNumber)
 			if err != nil {
 				return err
 			}

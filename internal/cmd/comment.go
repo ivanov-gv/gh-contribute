@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func (l *lazyApp) newCommentCmd() *cobra.Command {
+func (a *app) newCommentCmd() *cobra.Command {
 	var prNumber int
 
 	cmd := &cobra.Command{
@@ -14,16 +14,10 @@ func (l *lazyApp) newCommentCmd() *cobra.Command {
 		Short: "Post a comment on a PR",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			a, err := l.get()
-			if err != nil {
-				handleErr(err)
-				return nil
-			}
-
 			body := args[0]
 
 			// resolve PR number
-			number, err := resolvePR(a, prNumber)
+			number, err := a.resolvePR(prNumber)
 			if err != nil {
 				return err
 			}
