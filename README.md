@@ -25,7 +25,7 @@ gh contribute react 987654321 rocket --type review
 gh contribute review 3929204495
 ```
 
-All commands auto-detect the repository (from git remote) and PR number (from current branch). No configuration needed beyond a `GITHUB_TOKEN`.
+All commands auto-detect the repository (from git remote) and PR number (from current branch). Run `gh contribute auth login` once to authenticate.
 
 ---
 
@@ -233,16 +233,47 @@ Then either:
 
 ### Authentication
 
-gh-contribute needs a `GITHUB_TOKEN` environment variable. Any of these work:
+gh-contribute uses its own GitHub App and issues tokens via the **Device Authorization Flow** (RFC 8628). API calls appear as `myapp[bot] on behalf of <username>`, giving them proper attribution without exposing your personal token.
 
-| Method | How |
-|--------|-----|
-| Environment variable | `export GITHUB_TOKEN=ghp_...` |
-| `.env` file | Create `.env` with `GITHUB_TOKEN=ghp_...` in the working directory |
-| GitHub App installation | Generate a token via `gh token generate` or your app's API |
-| gh CLI fallback | If no `GITHUB_TOKEN` is set, falls back to `gh auth token` |
+#### First-time login
 
-The token needs `repo` scope (or fine-grained permissions for pull requests and issues).
+```bash
+gh contribute auth login
+```
+
+This prints a URL and a short code, then waits:
+
+```
+Open: https://github.com/login/device
+Enter code: XXXX-YYYY
+```
+
+Open the URL in your browser, enter the code, and authorize the app. The token is stored at `~/.config/gh-contribute/token` with `0600` permissions and reused for all future sessions.
+
+#### Check status
+
+```bash
+gh contribute auth status
+# Logged in as: your-username
+```
+
+#### CI and non-interactive environments
+
+Device Flow requires a browser. In CI, set the `GH_CONTRIBUTE_TOKEN` environment variable instead:
+
+```bash
+export GH_CONTRIBUTE_TOKEN=github_pat_...
+```
+
+When set, the env var takes priority over the stored token file. No login step needed.
+
+#### Token lifecycle
+
+Tokens are non-expiring by default (GitHub App expiration is disabled). If a token is revoked or a request returns `401`, gh-contribute exits with:
+
+```
+Error: token invalid or expired — run 'gh contribute auth login' to reauthenticate
+```
 
 ## Auto-detection
 
@@ -265,14 +296,20 @@ This means in most cases you just run `gh contribute comments` with zero flags a
 gh-contribute/
 ├── cmd/gh-contribute/main.go           # entry point
 ├── internal/
+│   ├── auth/                           # Device Authorization Flow (RFC 8628)
+│   │   ├── auth.go                     # RunDeviceFlow, GetUsername (via go-github SDK)
+│   │   └── errors.go                   # ErrTokenInvalid sentinel
 │   ├── cmd/                            # cobra command definitions
-│   │   ├── root.go                     # root command, dependency wiring
+│   │   ├── root.go                     # root command, dependency wiring, PersistentPreRunE
+│   │   ├── auth.go                     # auth login / auth status commands
 │   │   ├── pr.go                       # pr command + PR auto-detection
 │   │   ├── comments.go                 # comments command
 │   │   ├── comment.go                  # comment command (post)
 │   │   ├── react.go                    # react command
 │   │   └── review.go                   # review command (inline comment detail)
-│   ├── config/config.go                # token + repo detection from env/git
+│   ├── config/
+│   │   ├── config.go                   # repo detection from git remote
+│   │   └── token.go                    # LoadToken / SaveToken, GH_CONTRIBUTE_TOKEN env, ErrNotAuthenticated
 │   ├── format/format.go                # shared formatting utilities (reactions, dates, authors)
 │   ├── github/graphql.go               # GraphQL client (queries)
 │   ├── git/git.go                      # git helpers (current branch)
@@ -282,20 +319,34 @@ gh-contribute/
 │       │   └── format.go               # PR markdown formatting
 │       ├── comment/
 │       │   ├── comment.go              # list via GraphQL, post via REST
-│       │   └── format.go              # comment/review markdown formatting
+│       │   └── format.go               # comment/review markdown formatting
 │       ├── reaction/reaction.go        # add reactions via REST
 │       └── review/
 │           ├── review.go               # review detail with inline comments via GraphQL
 │           └── format.go               # review detail markdown formatting
+├── .claude/
+│   ├── hooks/session-start.sh          # SessionStart hook: build + auth check
+│   └── settings.json                   # Claude Code hook registration
 ├── go.mod
 └── go.sum
 ```
 
 Built with:
-- [google/go-github](https://github.com/google/go-github) — GitHub REST API client (for mutations)
+- [google/go-github](https://github.com/google/go-github) — GitHub REST API client (mutations + `GetUsername`)
 - GitHub GraphQL API v4 — for rich read queries (reactions, review threads, metadata)
 - [spf13/cobra](https://github.com/spf13/cobra) — CLI framework
 - [joho/godotenv](https://github.com/joho/godotenv) — `.env` file loading
+- [rs/zerolog](https://github.com/rs/zerolog) — structured logging
+
+### Claude Code on the web
+
+The `.claude/hooks/session-start.sh` hook runs automatically at the start of every remote Claude Code session. It:
+
+1. Runs `go mod download` to warm the module cache
+2. Builds the extension binary
+3. Checks `auth status` — if no token is found, starts `auth login` so you can authorize before the agent begins work
+
+This ensures the agent always has valid GitHub credentials before it needs them, preventing mid-task authentication interruptions.
 
 ## Ways to Improve
 
@@ -303,4 +354,4 @@ Built with:
 - **Diff-aware comments** — post inline review comments on specific files and lines
 - **Webhook listener** — built-in server that watches for review events and triggers agent actions
 - **Multi-PR support** — list and manage comments across all open PRs in a repo
-- **GitHub App installation auth** — generate and refresh tokens automatically instead of requiring a pre-set `GITHUB_TOKEN`
+- **Token refresh** — currently tokens are non-expiring; if GitHub App expiration is enabled, add a refresh flow
