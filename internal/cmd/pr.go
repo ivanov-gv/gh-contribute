@@ -9,12 +9,18 @@ import (
 	"github.com/ivanov-gv/gh-contribute/internal/git"
 )
 
-func (a *app) newPRCmd() *cobra.Command {
+func (l *lazyApp) newPRCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "pr [number]",
 		Short: "Show PR details",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			a, err := l.get()
+			if err != nil {
+				handleErr(err)
+				return nil
+			}
+
 			var prNumber int
 			if len(args) > 0 {
 				n, err := strconv.Atoi(args[0])
@@ -24,7 +30,7 @@ func (a *app) newPRCmd() *cobra.Command {
 				prNumber = n
 			}
 
-			number, err := a.resolvePR(prNumber)
+			number, err := resolvePR(a, prNumber)
 			if err != nil {
 				return err
 			}
@@ -42,8 +48,8 @@ func (a *app) newPRCmd() *cobra.Command {
 	return cmd
 }
 
-// resolvePR determines the PR number — from positional arg or by looking up current branch
-func (a *app) resolvePR(prNumber int) (int, error) {
+// resolvePR determines the PR number from a positional arg or by looking up the current branch.
+func resolvePR(a *app, prNumber int) (int, error) {
 	if prNumber > 0 {
 		return prNumber, nil
 	}

@@ -2,36 +2,31 @@ package config
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 
 	"github.com/joho/godotenv"
+
+	"github.com/ivanov-gv/gh-contribute/internal/auth"
 )
 
 // Config holds the runtime configuration
 type Config struct {
-	Token string // GitHub API token
+	Token string // GitHub App user access token
 	Owner string // Repository owner
 	Repo  string // Repository name
 }
 
-// Load reads configuration from environment and git context
+// Load reads configuration from environment and git context.
+// Token priority: MYEXT_TOKEN env var → ~/.config/gh-myext/token file.
 func Load() (*Config, error) {
 	// load .env if present (ignore error — file is optional)
 	_ = godotenv.Load()
 
-	token := os.Getenv("GITHUB_TOKEN")
-	if token == "" {
-		// try gh auth token as fallback
-		out, err := exec.Command("gh", "auth", "token").Output()
-		if err != nil {
-			return nil, fmt.Errorf("GITHUB_TOKEN not set and gh auth token failed: %w", err)
-		}
-		token = strings.TrimSpace(string(out))
-	}
-	if token == "" {
-		return nil, fmt.Errorf("no GitHub token found")
+	// load GitHub App user access token
+	token, err := auth.LoadToken()
+	if err != nil {
+		return nil, fmt.Errorf("auth.LoadToken: %w", err)
 	}
 
 	// detect owner/repo from git remote

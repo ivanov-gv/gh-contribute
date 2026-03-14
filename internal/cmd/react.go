@@ -9,7 +9,7 @@ import (
 	"github.com/ivanov-gv/gh-contribute/internal/service/reaction"
 )
 
-func (a *app) newReactCmd() *cobra.Command {
+func (l *lazyApp) newReactCmd() *cobra.Command {
 	var commentType string
 
 	cmd := &cobra.Command{
@@ -21,6 +21,12 @@ func (a *app) newReactCmd() *cobra.Command {
 		),
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			a, err := l.get()
+			if err != nil {
+				handleErr(err)
+				return nil
+			}
+
 			commentID, err := strconv.ParseInt(args[0], 10, 64)
 			if err != nil {
 				return fmt.Errorf("invalid comment ID '%s': %w", args[0], err)
