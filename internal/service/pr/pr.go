@@ -101,7 +101,7 @@ type prNode struct {
 			RequestedReviewer prReviewerNode
 		}
 	} `graphql:"reviewRequests(first: 20)"`
-	Milestone   *prMilestone
+	Milestone  *prMilestone
 	ProjectsV2 struct {
 		Nodes []struct {
 			Title githubv4.String

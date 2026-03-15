@@ -64,8 +64,8 @@ type reactionNode struct {
 
 // issueCommentNode is a single top-level comment node
 type issueCommentNode struct {
-	DatabaseID      int64
-	Author          struct {
+	DatabaseID int64
+	Author     struct {
 		Login githubv4.String
 	}
 	Body            githubv4.String

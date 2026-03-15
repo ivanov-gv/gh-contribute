@@ -24,15 +24,15 @@ func NewService(gql *githubv4.Client, owner, repo string) *Service {
 
 // ReviewComment holds a single comment that belongs to the requested review
 type ReviewComment struct {
-	DatabaseID         int64
-	Author             string
-	Body               string
-	CreatedAt          string
-	ReplyToID          int64 // 0 if thread root
-	ReplyToIsExternal  bool  // true when ReplyToID refers to a comment outside this review
-	IsMinimized        bool
-	MinimizedReason    string
-	Reactions          []format.Reaction
+	DatabaseID        int64
+	Author            string
+	Body              string
+	CreatedAt         string
+	ReplyToID         int64 // 0 if thread root
+	ReplyToIsExternal bool  // true when ReplyToID refers to a comment outside this review
+	IsMinimized       bool
+	MinimizedReason   string
+	Reactions         []format.Reaction
 }
 
 // ReviewThreadGroup holds the comments from this review that belong to the same thread.
@@ -333,7 +333,7 @@ func newThreadGroup[C interface{ getID() int64 }](
 	return g
 }
 
-func (c threadCommentNodeNoDiff) getID() int64  { return c.DatabaseID }
+func (c threadCommentNodeNoDiff) getID() int64   { return c.DatabaseID }
 func (c threadCommentNodeWithDiff) getID() int64 { return c.DatabaseID }
 
 // commentIDSet builds a set of database IDs for fast membership checks.

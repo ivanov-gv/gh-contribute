@@ -27,8 +27,8 @@ type ThreadComment struct {
 	Author           string
 	Body             string
 	CreatedAt        string
-	ReviewDatabaseID int64  // which review this comment belongs to
-	ReplyToID        int64  // 0 if thread root
+	ReviewDatabaseID int64 // which review this comment belongs to
+	ReplyToID        int64 // 0 if thread root
 	IsMinimized      bool
 	MinimizedReason  string
 	Reactions        []format.Reaction
@@ -36,7 +36,7 @@ type ThreadComment struct {
 
 // Thread holds all comments in a thread and location info
 type Thread struct {
-	ThreadID          int64  // databaseId of the first comment
+	ThreadID          int64 // databaseId of the first comment
 	IsOutdated        bool
 	Path              string
 	Line              int

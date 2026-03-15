@@ -9,8 +9,8 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
-	"github.com/ivanov-gv/gh-contribute/internal/config"
 	ghclient "github.com/ivanov-gv/gh-contribute/internal/client/github"
+	"github.com/ivanov-gv/gh-contribute/internal/config"
 	"github.com/ivanov-gv/gh-contribute/internal/service/comment"
 	"github.com/ivanov-gv/gh-contribute/internal/service/pr"
 	"github.com/ivanov-gv/gh-contribute/internal/service/reaction"
