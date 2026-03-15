@@ -14,6 +14,6 @@
     // tools installed via `go install` (e.g. gopls).
     "PATH": "${containerEnv:PATH}:/root/go/bin"
   },
-  // Install gopls on first create. Subsequent rebuilds skip this since the volume is cached.
+  // Install gopls on first create. Runs on each container creation; gopls is fast since Go's module proxy caches it.
   "postCreateCommand": "go install golang.org/x/tools/gopls@latest"
 }

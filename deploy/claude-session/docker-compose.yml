@@ -19,6 +19,8 @@ services:
     tty: true
     user: dev
     command: /bin/zsh
+    environment:
+      DEVCONTAINER: "false"
     cap_add:
       - NET_ADMIN
       - NET_RAW
