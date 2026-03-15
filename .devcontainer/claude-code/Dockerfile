@@ -1,4 +1,4 @@
-FROM golang:bookworm
+FROM golang:latest
 
 ARG TZ
 ENV TZ="$TZ"
@@ -6,13 +6,12 @@ ENV TZ="$TZ"
 ARG CLAUDE_CODE_VERSION=latest
 ARG GIT_DELTA_VERSION=0.18.2
 ARG ZSH_IN_DOCKER_VERSION=1.2.0
-ARG NODE_VERSION=20
 
 # Install all system-level tools via the dedicated script.
 # To add a new tool, edit install-deps.sh — no Dockerfile changes needed.
-COPY .devcontainer/install-deps.sh /tmp/install-deps.sh
+COPY .devcontainer/claude-code/install-deps.sh /tmp/install-deps.sh
 RUN chmod +x /tmp/install-deps.sh && \
-  GIT_DELTA_VERSION=${GIT_DELTA_VERSION} NODE_VERSION=${NODE_VERSION} \
+  GIT_DELTA_VERSION=${GIT_DELTA_VERSION} \
   /tmp/install-deps.sh && \
   rm /tmp/install-deps.sh
 
@@ -24,9 +23,6 @@ RUN adduser --disabled-password --gecos "" --shell /usr/bin/zsh dev
 
 # Allow dev user to use docker group (GID reconciled at runtime in setup.sh)
 RUN groupadd -f docker && usermod -aG docker dev
-
-# npm global dir owned by dev so Claude Code installs without sudo
-RUN mkdir -p /usr/local/share/npm-global && chown dev:dev /usr/local/share/npm-global
 
 # Persist bash history across rebuilds
 RUN mkdir /commandhistory && touch /commandhistory/.bash_history && chown -R dev /commandhistory
@@ -52,11 +48,40 @@ RUN cd /build/gh-contribute && \
 
 RUN chown -R dev:dev /workspace /home/dev/.claude /home/dev/go
 
+# Install Claude Code as a native binary (no Node.js or npm required).
+# CLAUDE_CODE_VERSION=latest fetches the newest release from GitHub.
+# Set CLAUDE_CODE_VERSION to a specific version tag (e.g. "1.2.3") to pin.
+# NOTE: confirm release asset naming at https://github.com/anthropics/claude-code/releases
+# if the binary URL changes in a future release.
+RUN set -eux; \
+    ARCH=$(dpkg --print-architecture); \
+    case "$ARCH" in \
+        amd64) CC_ARCH="x64" ;; \
+        arm64) CC_ARCH="arm64" ;; \
+        *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
+    esac; \
+    if [ "$CLAUDE_CODE_VERSION" = "latest" ]; then \
+        TAG=$(curl -sf https://api.github.com/repos/anthropics/claude-code/releases/latest \
+              | jq -r '.tag_name'); \
+    else \
+        TAG="v${CLAUDE_CODE_VERSION}"; \
+    fi; \
+    curl -fsSL \
+        "https://github.com/anthropics/claude-code/releases/download/${TAG}/claude-linux-${CC_ARCH}" \
+        -o /usr/local/bin/claude; \
+    chmod +x /usr/local/bin/claude; \
+    claude --version
+
+# Copy setup scripts and grant passwordless sudo for them
+COPY .devcontainer/shared/init-firewall.sh /usr/local/bin/
+COPY .devcontainer/shared/setup.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/init-firewall.sh /usr/local/bin/setup.sh && \
+  echo "dev ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh, /usr/local/bin/setup.sh" \
+    > /etc/sudoers.d/dev-scripts && \
+  chmod 0440 /etc/sudoers.d/dev-scripts
+
 USER dev
 
-# npm global config — installs packages to a dir the dev user owns
-ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
-ENV PATH=$PATH:/usr/local/share/npm-global/bin
 ENV SHELL=/bin/zsh
 ENV EDITOR=nano
 ENV VISUAL=nano
@@ -70,15 +95,5 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
   -a "export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
   -x
 
-# Install Claude Code globally
-RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
-
-# Copy setup scripts and grant passwordless sudo for them
-COPY .devcontainer/init-firewall.sh /usr/local/bin/
-COPY .devcontainer/setup.sh /usr/local/bin/
-USER root
-RUN chmod +x /usr/local/bin/init-firewall.sh /usr/local/bin/setup.sh && \
-  echo "dev ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh, /usr/local/bin/setup.sh" \
-    > /etc/sudoers.d/dev-scripts && \
-  chmod 0440 /etc/sudoers.d/dev-scripts
-USER dev
+# Install gopls for Go language server support
+RUN go install golang.org/x/tools/gopls@latest
