@@ -15,6 +15,7 @@ import (
 	"github.com/ivanov-gv/gh-contribute/internal/service/pr"
 	"github.com/ivanov-gv/gh-contribute/internal/service/reaction"
 	"github.com/ivanov-gv/gh-contribute/internal/service/review"
+	"github.com/ivanov-gv/gh-contribute/internal/service/thread"
 )
 
 // app holds shared dependencies for all authenticated commands.
@@ -24,6 +25,7 @@ type app struct {
 	commentService  *comment.Service
 	reactionService *reaction.Service
 	reviewService   *review.Service
+	threadService   *thread.Service
 }
 
 // init loads config and initializes all services.
@@ -42,6 +44,7 @@ func (a *app) init() error {
 	a.commentService = comment.NewService(gql, rest, cfg.Owner, cfg.Repo)
 	a.reactionService = reaction.NewService(rest, cfg.Owner, cfg.Repo)
 	a.reviewService = review.NewService(gql, cfg.Owner, cfg.Repo)
+	a.threadService = thread.NewService(gql, cfg.Owner, cfg.Repo)
 
 	return nil
 }
@@ -72,6 +75,7 @@ func Execute() {
 		_app.newCommentCmd(),
 		_app.newReactCmd(),
 		_app.newReviewCmd(),
+		_app.newThreadCmd(),
 	)
 
 	if err := rootCmd.Execute(); err != nil {

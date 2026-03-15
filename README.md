@@ -23,6 +23,9 @@ gh contribute react 987654321 rocket --type review
 
 # show inline comments for a specific review
 gh contribute review 3929204495
+
+# show all comments in a thread across reviews (use thread id from review output)
+gh contribute thread 2935138407
 ```
 
 All commands auto-detect the repository (from git remote) and PR number (from current branch). Run `gh contribute auth login` once to authenticate.
@@ -199,17 +202,79 @@ Valid reactions: `+1`, `-1`, `laugh`, `confused`, `heart`, `hooray`, `rocket`, `
 
 ### `gh contribute review`
 
-Show a specific review's inline comments with thread context.
+Show a specific review's inline comments. Only comments belonging to the requested review are shown, grouped by thread. If a comment replies to one from a different review, it is flagged as `(not in this review)` — use `thread` to see the full context.
 
 ```bash
 # show inline comments for review by id (use id from comments output)
 gh contribute review 3929204495
 
+# include the diff hunk for each thread
+gh contribute review 3929204495 --diff
+
 # specify PR explicitly
 gh contribute review 3929204495 --pr 42
 ```
 
-Output shows the review body, reactions, and all inline comment threads grouped and sorted, with replies indented using `>`.
+Output:
+```
+# review #3948671120 by you (@ivanov-gv)
+_2026-03-14 11:13:03_
+
+Needs fixes.
+
+
+thread #2935132146  internal/auth/auth.go on original line 22 (outdated)
+comment #2935132146 by you (@ivanov-gv)
+_2026-03-14 11:13:03_
+
+Name it as GH_CONTIBUTE_TOKEN
+
+---
+thread #2935132635  internal/auth/auth.go on original line 25 (outdated)
+comment #2935132635 by you (@ivanov-gv)
+_2026-03-14 11:13:32_
+
+Use this path instead: .config/gh-contribute/token
+```
+
+Cross-review reply example (reply belongs to this review, but replies to a comment from another):
+```
+thread #2935138407  internal/auth/auth.go on original line 88 (outdated)
+reply #2935243067 to #2935138407 (not in this review)  by you (@ivanov-gv)
+_2026-03-14 12:37:24_
+
+Yes, you fixed this particular issue on this line in this file, ...
+```
+
+### `gh contribute thread`
+
+Show all comments in a thread across all reviews. Use the thread id from the `review` output (the `thread #ID` header). Each comment is annotated with its review id.
+
+```bash
+# show the full thread
+gh contribute thread 2935138407
+
+# specify PR explicitly
+gh contribute thread 2935138407 --pr 42
+```
+
+Output:
+```
+# thread #2935138407  internal/auth/auth.go on original line 88 (outdated)
+
+comment #2935138407 by @ivanov-gv  review #3948671120
+_2026-03-14 11:18:37_
+
+No, stderr for errors, stdout for output. Use logging, not a simple printf
+
+---
+reply #2935243067 to #2935138407  by @ivanov-gv  review #3948810914
+_2026-03-14 12:37:24_
+
+Yes, you fixed this particular issue on this line in this file, ...
+```
+
+Typical workflow: `review` for focused reading of one review's feedback; `thread <id>` when you need the full cross-review conversation.
 
 ## Installation
 
@@ -306,7 +371,8 @@ gh-contribute/
 │   │   ├── comments.go                 # comments command
 │   │   ├── comment.go                  # comment command (post)
 │   │   ├── react.go                    # react command
-│   │   └── review.go                   # review command (inline comment detail)
+│   │   ├── review.go                   # review command (inline comment detail)
+│   │   └── thread.go                   # thread command (full thread across reviews)
 │   ├── config/
 │   │   ├── config.go                   # repo detection from git remote
 │   │   └── token.go                    # LoadToken / SaveToken, GH_CONTRIBUTE_TOKEN env, ErrNotAuthenticated
@@ -321,9 +387,12 @@ gh-contribute/
 │       │   ├── comment.go              # list via GraphQL, post via REST
 │       │   └── format.go               # comment/review markdown formatting
 │       ├── reaction/reaction.go        # add reactions via REST
-│       └── review/
-│           ├── review.go               # review detail with inline comments via GraphQL
-│           └── format.go               # review detail markdown formatting
+│       ├── review/
+│       │   ├── review.go               # review detail — only this review's comments, grouped by thread
+│       │   └── format.go               # review detail markdown formatting
+│       └── thread/
+│           ├── thread.go               # full thread across all reviews via GraphQL
+│           └── format.go               # thread markdown formatting
 ├── .claude/
 │   ├── hooks/session-start.sh          # SessionStart hook: build + auth check
 │   └── settings.json                   # Claude Code hook registration
@@ -351,7 +420,7 @@ This ensures the agent always has valid GitHub credentials before it needs them,
 ## Ways to Improve
 
 - **Reply to review comments** — post threaded replies to specific inline comments
-- **Diff-aware comments** — post inline review comments on specific files and lines
+- **Diff-aware new comments** — post inline review comments on specific files and lines
 - **Webhook listener** — built-in server that watches for review events and triggers agent actions
 - **Multi-PR support** — list and manage comments across all open PRs in a repo
 - **Token refresh** — currently tokens are non-expiring; if GitHub App expiration is enabled, add a refresh flow

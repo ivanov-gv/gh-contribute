@@ -25,16 +25,19 @@ func (a *app) newReviewCmd() *cobra.Command {
 				return err
 			}
 
-			detail, err := a.reviewService.Get(number, reviewID)
+			showDiff, _ := cmd.Flags().GetBool("diff")
+
+			detail, err := a.reviewService.Get(number, reviewID, showDiff)
 			if err != nil {
 				return fmt.Errorf("reviewService.Get [pr=%d, review=%d]: %w", number, reviewID, err)
 			}
 
-			fmt.Print(detail.Format())
+			fmt.Print(detail.Format(showDiff))
 			return nil
 		},
 	}
 
 	cmd.Flags().Int("pr", 0, "PR number (auto-detected from current branch if not set)")
+	cmd.Flags().Bool("diff", false, "Include diff hunk for each comment")
 	return cmd
 }

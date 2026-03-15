@@ -64,7 +64,7 @@ type reactionNode struct {
 
 // issueCommentNode is a single top-level comment node
 type issueCommentNode struct {
-	DatabaseID      githubv4.Int
+	DatabaseID      int64
 	Author          struct {
 		Login githubv4.String
 	}
@@ -79,7 +79,7 @@ type issueCommentNode struct {
 
 // reviewNode is a single review node
 type reviewNode struct {
-	DatabaseID githubv4.Int
+	DatabaseID int64
 	Author     struct {
 		Login githubv4.String
 	}
@@ -130,7 +130,7 @@ func (s *Service) List(prNumber int) (*CommentsResult, error) {
 	var issueComments []IssueComment
 	for _, n := range pr.Comments.Nodes {
 		issueComments = append(issueComments, IssueComment{
-			DatabaseID:      int64(n.DatabaseID),
+			DatabaseID:      n.DatabaseID,
 			Author:          string(n.Author.Login),
 			Body:            string(n.Body),
 			CreatedAt:       n.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
@@ -143,7 +143,7 @@ func (s *Service) List(prNumber int) (*CommentsResult, error) {
 	var reviews []Review
 	for _, n := range pr.Reviews.Nodes {
 		reviews = append(reviews, Review{
-			DatabaseID:      int64(n.DatabaseID),
+			DatabaseID:      n.DatabaseID,
 			Author:          string(n.Author.Login),
 			Body:            string(n.Body),
 			State:           string(n.State),
