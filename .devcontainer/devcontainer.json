@@ -38,14 +38,6 @@
   "mounts": [
     // Persist shell history across rebuilds
     "source=gh-contribute-bashhistory-${devcontainerId},target=/commandhistory,type=volume",
-    // Share host Claude config — no manual re-auth needed inside the container.
-    // ~/.claude.json holds the OAuth token (global state); ~/.claude/ holds settings and credentials.
-    // Run `touch ~/.claude.json && mkdir -p ~/.claude` on the host if they don't exist yet.
-    "source=${localEnv:HOME}/.claude.json,target=/home/dev/.claude.json,type=bind,consistency=cached",
-    "source=${localEnv:HOME}/.claude,target=/home/dev/.claude,type=bind,consistency=cached",
-    // Share host gh-contribute token file — no manual re-auth needed inside the container.
-    // Run `mkdir -p ~/.config/gh-contribute` on the host if the directory doesn't exist yet.
-    "source=${localEnv:HOME}/.config/gh-contribute,target=/home/dev/.config/gh-contribute,type=bind,readonly,consistency=cached"
   ],
   "containerEnv": {
     // Claude Code — ANTHROPIC_API_KEY alone is enough for headless/API-key auth.

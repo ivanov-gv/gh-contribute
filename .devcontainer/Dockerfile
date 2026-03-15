@@ -1,4 +1,4 @@
-FROM golang:1.24-bookworm
+FROM golang:bookworm
 
 ARG TZ
 ENV TZ="$TZ"
@@ -49,6 +49,8 @@ COPY . /build/gh-contribute
 RUN cd /build/gh-contribute && \
   go build -o /usr/local/bin/gh-contribute ./cmd/gh-contribute && \
   rm -rf /build/gh-contribute
+
+RUN chown -R dev:dev /workspace /home/dev/.claude /home/dev/go
 
 USER dev
 
