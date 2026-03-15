@@ -7,7 +7,6 @@
 # Allowed outbound:
 #   - GitHub (API, web, git, container registry)
 #   - Anthropic API (Claude)
-#   - npm registry
 #   - Go module proxy and checksum DB
 #   - Docker Hub and GHCR (pulling test images)
 #   - Sentry, Statsig, VS Code Marketplace (Claude Code internals)
@@ -73,7 +72,6 @@ done < <(echo "$GH_META" | jq -r '(.web + .api + .git + .packages)[]' | aggregat
 # Resolve individual allowed domains
 for domain in \
     "api.anthropic.com" \
-    "registry.npmjs.org" \
     "proxy.golang.org" \
     "sum.golang.org" \
     "storage.googleapis.com" \
