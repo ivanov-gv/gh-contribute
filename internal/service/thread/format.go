@@ -15,7 +15,10 @@ func (t *Thread) Format() string {
 	b.WriteString(fmt.Sprintf("# thread #%d  %s  \n", t.ThreadID, location))
 	b.WriteString("\n")
 
-	for _, c := range t.Comments {
+	for i, c := range t.Comments {
+		if i > 0 {
+			b.WriteString("\n---\n")
+		}
 		b.WriteString(formatThreadComment(c, t.ViewerLogin))
 	}
 

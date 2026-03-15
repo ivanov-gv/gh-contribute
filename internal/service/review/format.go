@@ -24,14 +24,13 @@ func (d *ReviewDetail) Format(showDiff bool) string {
 
 	b.WriteString(format.Reactions(d.Reactions, d.ViewerLogin))
 
-	for _, group := range d.ThreadGroups {
-		b.WriteString("\n---\n")
+	for i, group := range d.ThreadGroups {
+		if i > 0 {
+			b.WriteString("\n---\n")
+		} else {
+			b.WriteString("\n")
+		}
 		b.WriteString(formatThreadGroup(group, d.ViewerLogin, showDiff))
-		b.WriteString("\n---")
-	}
-
-	if len(d.ThreadGroups) > 0 {
-		b.WriteString("\n")
 	}
 
 	return strings.TrimRight(b.String(), "\n") + "\n"
