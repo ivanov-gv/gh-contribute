@@ -193,41 +193,19 @@ func formatLocation(c *ReviewComment) string {
 }
 
 func formatCurrentLocation(c *ReviewComment) string {
-	lineInfo := ""
 	if c.StartLine > 0 && c.Line > 0 && c.StartLine != c.Line {
-		lineInfo = fmt.Sprintf(" on lines +%d to +%d", c.StartLine, c.Line)
+		return fmt.Sprintf("%s on lines +%d to +%d", c.Path, c.StartLine, c.Line)
 	} else if c.Line > 0 {
-		lineInfo = fmt.Sprintf(" on line +%d", c.Line)
+		return fmt.Sprintf("%s on line +%d", c.Path, c.Line)
 	}
-
-	commitInfo := ""
-	if c.CommitSHA != "" {
-		sha7 := c.CommitSHA
-		if len(sha7) > 7 {
-			sha7 = sha7[:7]
-		}
-		commitInfo = fmt.Sprintf("  commit %s", sha7)
-	}
-
-	return fmt.Sprintf("%s%s%s", c.Path, lineInfo, commitInfo)
+	return c.Path
 }
 
 func formatOutdatedLocation(c *ReviewComment) string {
-	lineInfo := ""
 	if c.OriginalStartLine > 0 && c.OriginalLine > 0 && c.OriginalStartLine != c.OriginalLine {
-		lineInfo = fmt.Sprintf(" on original lines %d to %d", c.OriginalStartLine, c.OriginalLine)
+		return fmt.Sprintf("%s on original lines %d to %d (outdated)", c.Path, c.OriginalStartLine, c.OriginalLine)
 	} else if c.OriginalLine > 0 {
-		lineInfo = fmt.Sprintf(" on original line %d", c.OriginalLine)
+		return fmt.Sprintf("%s on original line %d (outdated)", c.Path, c.OriginalLine)
 	}
-
-	commitInfo := ""
-	if c.OriginalCommitSHA != "" {
-		sha7 := c.OriginalCommitSHA
-		if len(sha7) > 7 {
-			sha7 = sha7[:7]
-		}
-		commitInfo = fmt.Sprintf("  original commit %s", sha7)
-	}
-
-	return fmt.Sprintf("%s%s%s (outdated)", c.Path, lineInfo, commitInfo)
+	return fmt.Sprintf("%s (outdated)", c.Path)
 }

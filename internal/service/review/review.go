@@ -23,6 +23,8 @@ func NewService(gql *githubv4.Client, owner, repo string) *Service {
 }
 
 // ReviewComment holds a single inline review comment
+// Note: CommitSHA/OriginalCommitSHA are intentionally absent — commit fields require
+// Contents:Read permission which is not in scope for this GitHub App.
 type ReviewComment struct {
 	DatabaseID        int64
 	Author            string
@@ -33,8 +35,6 @@ type ReviewComment struct {
 	StartLine         int
 	OriginalLine      int
 	OriginalStartLine int
-	CommitSHA         string
-	OriginalCommitSHA string
 	DiffHunk          string
 	ReplyToID         int64 // 0 if top-level
 	IsMinimized       bool
@@ -65,6 +65,7 @@ type reactionNode struct {
 }
 
 // reviewCommentNodeNoDiff - comment query shape without diffHunk
+// Note: commit/originalCommit fields require Contents:Read permission and are omitted.
 type reviewCommentNodeNoDiff struct {
 	DatabaseID int64
 	Author     struct {
@@ -77,13 +78,7 @@ type reviewCommentNodeNoDiff struct {
 	StartLine         *githubv4.Int
 	OriginalLine      *githubv4.Int
 	OriginalStartLine *githubv4.Int
-	Commit            *struct {
-		OID githubv4.String `graphql:"oid"`
-	}
-	OriginalCommit *struct {
-		OID githubv4.String `graphql:"oid"`
-	}
-	ReplyTo *struct {
+	ReplyTo           *struct {
 		DatabaseID int64
 	}
 	IsMinimized     githubv4.Boolean
@@ -96,6 +91,7 @@ type reviewCommentNodeNoDiff struct {
 }
 
 // reviewCommentNodeWithDiff - comment query shape with diffHunk
+// Note: commit/originalCommit fields require Contents:Read permission and are omitted.
 type reviewCommentNodeWithDiff struct {
 	DatabaseID int64
 	Author     struct {
@@ -108,14 +104,8 @@ type reviewCommentNodeWithDiff struct {
 	StartLine         *githubv4.Int
 	OriginalLine      *githubv4.Int
 	OriginalStartLine *githubv4.Int
-	Commit            *struct {
-		OID githubv4.String `graphql:"oid"`
-	}
-	OriginalCommit *struct {
-		OID githubv4.String `graphql:"oid"`
-	}
-	DiffHunk githubv4.String
-	ReplyTo  *struct {
+	DiffHunk          githubv4.String
+	ReplyTo           *struct {
 		DatabaseID int64
 	}
 	IsMinimized     githubv4.Boolean
@@ -234,12 +224,6 @@ func mapCommentCore(
 	createdAt githubv4.DateTime,
 	path githubv4.String,
 	line, startLine, originalLine, originalStartLine *githubv4.Int,
-	commit *struct {
-		OID githubv4.String `graphql:"oid"`
-	},
-	originalCommit *struct {
-		OID githubv4.String `graphql:"oid"`
-	},
 	diffHunk string,
 	replyTo *struct{ DatabaseID int64 },
 	isMinimized githubv4.Boolean,
@@ -273,12 +257,6 @@ func mapCommentCore(
 	if originalStartLine != nil {
 		rc.OriginalStartLine = int(*originalStartLine)
 	}
-	if commit != nil {
-		rc.CommitSHA = string(commit.OID)
-	}
-	if originalCommit != nil {
-		rc.OriginalCommitSHA = string(originalCommit.OID)
-	}
 	if replyTo != nil {
 		rc.ReplyToID = replyTo.DatabaseID
 	}
@@ -289,8 +267,7 @@ func mapCommentNoDiff(c reviewCommentNodeNoDiff) ReviewComment {
 	return mapCommentCore(
 		c.DatabaseID, c.Author.Login, c.Body, c.CreatedAt, c.Path,
 		c.Line, c.StartLine, c.OriginalLine, c.OriginalStartLine,
-		c.Commit, c.OriginalCommit, "",
-		c.ReplyTo, c.IsMinimized, c.MinimizedReason, c.Outdated, c.SubjectType,
+		"", c.ReplyTo, c.IsMinimized, c.MinimizedReason, c.Outdated, c.SubjectType,
 		c.Reactions.Nodes,
 	)
 }
@@ -299,8 +276,7 @@ func mapCommentWithDiff(c reviewCommentNodeWithDiff) ReviewComment {
 	return mapCommentCore(
 		c.DatabaseID, c.Author.Login, c.Body, c.CreatedAt, c.Path,
 		c.Line, c.StartLine, c.OriginalLine, c.OriginalStartLine,
-		c.Commit, c.OriginalCommit, string(c.DiffHunk),
-		c.ReplyTo, c.IsMinimized, c.MinimizedReason, c.Outdated, c.SubjectType,
+		string(c.DiffHunk), c.ReplyTo, c.IsMinimized, c.MinimizedReason, c.Outdated, c.SubjectType,
 		c.Reactions.Nodes,
 	)
 }
