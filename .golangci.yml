@@ -1,0 +1,25 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    # correctness
+    - errcheck       # unchecked errors
+    - govet          # go vet
+    - staticcheck    # static analysis
+    - unused         # unused code
+    - bodyclose      # http response body not closed
+    # style / quality
+    - revive         # drop-in replacement for golint
+    - gocritic       # code quality suggestions
+    - misspell       # spelling errors
+    - gofmt          # formatting
+
+linters-settings:
+  revive:
+    rules:
+      - name: exported
+        disabled: true  # don't require comments on every exported symbol
+  gocritic:
+    disabled-checks:
+      - ifElseChain   # we use guard clauses, not if-else chains
