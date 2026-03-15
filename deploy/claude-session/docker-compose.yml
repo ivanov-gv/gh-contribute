@@ -1,0 +1,26 @@
+# Claude Code session image — isolated terminal environment.
+#
+# Usage:
+#   docker compose run --rm claude-session
+#
+# Drops into zsh as the non-root `dev` user. From there:
+#   - Clone a repo: git clone <url>
+#   - Lock down outbound traffic: sudo init-firewall.sh
+#   - Start Claude Code: claude
+#
+# The build context is set to the repo root so the Dockerfile can share
+# COPY paths with the devcontainer Dockerfile without modification.
+services:
+  claude-session:
+    build:
+      context: ../..
+      dockerfile: deploy/claude-session/Dockerfile
+    stdin_open: true
+    tty: true
+    user: dev
+    command: /bin/zsh
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
