@@ -15,10 +15,6 @@
   No business logic here.
 - `internal/utils/` — Generic reusable helpers not tied to any domain. One subpackage per concern (e.g. `format/`).
 - `internal/.../utils` - Reusable helpers tied to a domain
-
-> **Rule**: every folder directly under `internal/` must be a category (a type of structure such as `service/`,
-> `client/`, `model/`), never an individual package. Individual packages live one level deeper inside their category
-> folder. Do not add new packages directly under `internal/`.
 - `gen/` — Generated code. Do not edit manually. Includes generated data files and mockery-generated test mocks (
   configured in `.mockery.yaml`).
 - `test/` — Integration tests (separated from unit tests which live next to source files in `internal/`).
@@ -26,6 +22,10 @@
 - `docs/` — Documentation and resources.
 - `.env.example` — Template for required environment variables. Copy to `.env` and fill in values. `.env` is gitignored
   and loaded by `Makefile` via `include .env`.
+
+> **Rule**: every folder directly under `internal/` must be a category (a type of structure such as `service/`,
+> `client/`, `model/`), never an individual package. Individual packages live one level deeper inside their category
+> folder. Do not add new packages directly under `internal/`.
 
 ## File Naming Conventions
 
@@ -131,11 +131,11 @@ func ReadSomeImportantInfo() {
 }
 ```
 
-Less nesting is better. Example:
+Less nesting is better. 
+
+Bad example:
 
 ```go
-package p
-
 func BadFunction(user User, data []int) error {
 	if user.IsActive {
 		if len(data) > 0 {
@@ -156,7 +156,11 @@ func BadFunction(user User, data []int) error {
 		return errors.New("user is inactive")
 	}
 }
+```
 
+Good example:
+
+```go
 func GoodFunction(user User, data []int) error {
 	// Use a guard clause for the 'IsActive' check
 	if !user.IsActive {
