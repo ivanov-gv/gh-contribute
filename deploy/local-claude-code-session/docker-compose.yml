@@ -1,0 +1,27 @@
+services:
+  claude-session:
+    build:
+      context: ../..
+      dockerfile: .devcontainer/claude-code/Dockerfile
+    stdin_open: true
+    tty: true
+    user: dev
+    command: /bin/sh -c "sudo /usr/local/bin/setup.sh && exec /bin/zsh"
+    environment:
+      DEVCONTAINER: "false"
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GH_CONTRIBUTE_TOKEN: ${GH_CONTRIBUTE_TOKEN:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GH_TOKEN: ${GH_TOKEN:-}
+      DOCKER_NETWORK: ${DOCKER_NETWORK:-gh-contribute-COMPOSE_PROJECT_NAME}
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - claude-config:/home/dev/.claude:cached
+      - claude-session-history:/commandhistory
+
+volumes:
+  claude-session-history:
+  claude-config:

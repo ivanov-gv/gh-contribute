@@ -9,11 +9,7 @@
   "remoteUser": "root",
   "containerEnv": {
     "GOPATH": "/root/go",
-    // Extend the base image PATH to include the user's Go bin directory.
-    // golang:latest already includes /usr/local/go/bin; this adds /root/go/bin for
-    // tools installed via `go install` (e.g. gopls).
     "PATH": "${containerEnv:PATH}:/root/go/bin"
   },
-  // Install gopls on first create. Runs on each container creation; gopls is fast since Go's module proxy caches it.
   "postCreateCommand": "go install golang.org/x/tools/gopls@latest"
 }

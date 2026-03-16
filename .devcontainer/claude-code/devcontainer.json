@@ -5,7 +5,6 @@
     "context": "../..",
     "args": {
       "TZ": "${localEnv:TZ:Europe/Berlin}",
-      "CLAUDE_CODE_VERSION": "latest",
       "GIT_DELTA_VERSION": "0.18.2",
       "ZSH_IN_DOCKER_VERSION": "1.2.0"
     }
@@ -13,7 +12,7 @@
   "runArgs": [
     "--cap-add=NET_ADMIN",
     "--cap-add=NET_RAW",
-    // Mount host Docker socket so Claude Code can run containers for testing.
+    // Mount the host Docker socket so Claude Code can run containers for testing.
     // Containers are placed on an isolated per-devcontainer bridge network (see setup.sh).
     "--mount=type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock"
   ],
@@ -26,30 +25,16 @@
   "mounts": [
     // Persist shell history across rebuilds
     "source=gh-contribute-bashhistory-${devcontainerId},target=/commandhistory,type=volume",
-    // Mount host ~/.claude so local plugins, settings, and auth are available inside the container
-    "source=${localEnv:HOME}/.claude,target=/home/dev/.claude,type=bind,consistency=cached"
   ],
   "containerEnv": {
-    // Claude Code — ANTHROPIC_API_KEY alone is enough for headless/API-key auth.
-    // If you use OAuth (`claude auth login` on the host), the ~/.claude bind mount above
-    // carries the session into the container automatically.
+    "DEVCONTAINER": "true",
     "CLAUDE_CONFIG_DIR": "/home/dev/.claude",
     "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}",
 
-    // GitHub auth for gh-contribute.
-    // Priority (from config/token.go): GH_CONTRIBUTE_TOKEN env var → ~/.config/gh-contribute/token file.
-    // Set GH_CONTRIBUTE_TOKEN on the host for env-var auth, or run `gh-contribute auth login`
-    // on the host once — the token file is shared via the bind mount above.
     "GH_CONTRIBUTE_TOKEN": "${localEnv:GH_CONTRIBUTE_TOKEN}",
-
-    // Standard GitHub tokens forwarded for gh CLI and any other tooling.
     "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}",
     "GH_TOKEN": "${localEnv:GH_TOKEN}",
 
-    // Docker network name for test containers — set by setup.sh on start.
-    // Use: docker run --network "$DOCKER_NETWORK" <image>
-    // Containers on this network can reach each other but are isolated from
-    // other devcontainers running on the same host Docker daemon.
     "DOCKER_NETWORK": "gh-contribute-${devcontainerId}",
 
     "POWERLEVEL9K_DISABLE_GITSTATUS": "true"
