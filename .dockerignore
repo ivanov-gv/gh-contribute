@@ -1,0 +1,34 @@
+# Exclude files that don't belong in the Docker build context.
+# The Dockerfile does: COPY . /build/gh-contribute — this file trims what gets sent.
+
+# Version control
+.git
+.gitignore
+
+# Build artifacts
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.*
+*.coverprofile
+profile.cov
+
+# Go workspace overrides
+go.work
+go.work.sum
+
+# Local config (secrets must not enter the image)
+.env
+
+# Docs and non-source assets
+docs/
+*.md
+
+# Editor and OS files
+.idea/
+.vscode/
+*.DS_Store

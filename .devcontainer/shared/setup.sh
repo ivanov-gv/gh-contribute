@@ -22,7 +22,7 @@ if docker network inspect "$NETWORK_NAME" >/dev/null 2>&1; then
 else
     docker network create \
         --driver bridge \
-        --label "devcontainer.id=$(hostname)" \
+        --label "devcontainer.network=$NETWORK_NAME" \
         "$NETWORK_NAME"
     echo "Created Docker network: $NETWORK_NAME"
 fi
