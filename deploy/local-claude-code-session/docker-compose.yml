@@ -13,7 +13,7 @@ services:
       GH_CONTRIBUTE_TOKEN: ${GH_CONTRIBUTE_TOKEN:-}
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
       GH_TOKEN: ${GH_TOKEN:-}
-      DOCKER_NETWORK: ${DOCKER_NETWORK:-gh-contribute-COMPOSE_PROJECT_NAME}
+      DOCKER_NETWORK: ${DOCKER_NETWORK:-gh-contribute-$COMPOSE_PROJECT_NAME}
     cap_add:
       - NET_ADMIN
       - NET_RAW
